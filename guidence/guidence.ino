@@ -91,6 +91,7 @@ void setup() {
   groundPressure = BARO.readPressure(); // Set pressure here to avoid potential interference from the motor.
 
   IMU.begin();
+  
   pinMode(brakePin, OUTPUT);
 }
 
