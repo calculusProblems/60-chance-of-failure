@@ -95,7 +95,7 @@ void setup() {
 }
 
 // Project our altitude and velocity outward to get our Apogee
-float getApogee(float calAltitude, float calVelocity) {
+float getApogee() {
   // Look for when the derivative (velocity) of the graph of our altitude is 0.
   // Issue with looking for derivative is that the function A\left(x\right) = \frac{gt^{2}}{2}+v_{i}t+A^{'}\left(x\right), which is a differiential equation; and I don't want to deal with that.
   return 0;
