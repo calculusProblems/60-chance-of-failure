@@ -9,16 +9,18 @@ bool hasLaunched = false; // Recalibrate orientation at launch.
 bool hasMECO = false; // Avoid activating the brakes during launch to avoid odd Apogee calculations.
 bool hasApogee = false; // Switch code after Apogee to target landing time
 
-int brakePin = 9; // PWM pin connected to brake servo
+int brakePins[] = {9, 10}; // PWM pin connected to brake servo (Adding in second pin so that we don't need a splitter for the second motor (the wires are already a mess))
+int altimeterPins[] = {2, 3, 4, 5, 6, 7}; // Pins attached to the altimeter
 
 float gravity = 9.81; // Value of gravity
 
 int hasLaunchedCheck = 0; // Check that we have postive velocity for a few frames before declaring hasLaunched.
 int hasMECOCheck = 0; // Check that we have negative acceleration for a few frames before declaring hasMECO.
+
 float groundPressure = 0; // Used to calibrate the barometric altimeter
 
 // Need to figure out if X, Y, or Z is up (use Y for now).
-// For some reason, Vector3s are not supported.
+// For some reason, Vector3s are not supported (the vector library wasn't working).
 // REMEMBER, THESE ARE LOCAL VELOCITY AND ACCELERATIONS, we will need to find world velocity and accelerations later.
 float velocityLocalX = 0.0;
 float velocityLocalY = 0.0;
@@ -48,8 +50,13 @@ int mspf = 20;
 
 float getAltitude() {
   // Barometric altitude.
-  float pressure = BARO.readPressure();
-  return (float) 44330*(1-pow(pressure / groundPressure, 1/5.255)); // https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
+  // float pressure = BARO.readPressure();
+  // return (float) 44330*(1-pow(pressure / groundPressure, 1/5.255)); // https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
+
+  // Actual altimeter
+  int total = 0;
+  for (int i = 0; i < (int) sizeof(altimeterPins)/sizeof(int); i++) total += digitalRead(altimeterPins[i]) * pow(2, i);
+  return total;
 }
 
 void updateVelocity() {
@@ -82,7 +89,8 @@ void setBrakes(float value) {
   // However, the force on the brakes is probaby about equal to the amount of drag we need, so we might be able to just do a small trig. calculation to get the amount of drag we need.
   // However, the orientation of the rocket will change the strength of the drag brakes.
   int pwm = (int) (value * 255);
-  analogWrite(brakePin, pwm);
+  analogWrite(brakePins[0], pwm);
+  analogWrite(brakePins[1], pwm);
 }
 
 // Power up system right before launch.
@@ -92,7 +100,9 @@ void setup() {
 
   IMU.begin();
   
-  pinMode(brakePin, OUTPUT);
+  pinMode(brakePins[0], OUTPUT);
+  pinMode(brakePins[1], OUTPUT);
+  for (int i = 0; i < (int) sizeof(altimeterPins)/sizeof(int); i++) pinMode(altimeterPins[i], INPUT);
 }
 
 // Project our altitude and velocity outward to get our Apogee
