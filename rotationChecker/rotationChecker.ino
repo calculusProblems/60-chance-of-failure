@@ -33,10 +33,21 @@ float accelerationWorldZ = 0.0;
 // miliseconds per frame
 int mspf = 20;
 
-float getAltitude() {
+float BAROGetAltitude() {
   // Barometric altitude.
   float pressure = BARO.readPressure();
   return (float) 44330*(1-pow(pressure / groundPressure, 1/5.255)); // https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
+}
+
+float actGetAltitude() {
+  // Barometric altitude.
+  // float pressure = BARO.readPressure();
+  // return (float) 44330*(1-pow(pressure / groundPressure, 1/5.255)); // https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
+
+  // Actual altimeter
+  int total = 0;
+  for (int i = 0; i < (int) sizeof(altimeterPins)/sizeof(int); i++) total += digitalRead(altimeterPins[i]) * pow(2, i);
+  return total;
 }
 
 void updateVelocity() {
@@ -65,10 +76,31 @@ void updateOrientation() {
 
 // Power up system right before launch.
 void setup() {
+  Serial.print("Initializing BARO");
   BARO.begin();
-  groundPressure = BARO.readPressure(); // Set pressure here to avoid potential interference from the motor.
+  if (!BARO.begin()) {
+    Serial.print("BARO initialization failed");
+    while (1);
+  }
 
+  Serial.print("Initializing IMU");
   IMU.begin();
+  if (!IMU.begin()) {
+    Serial.print("IMU initialization failed");
+    while (1);
+  }
+  
+  Serial.print("IMU acceleration sampling rate:");
+  Serial.print(IMU.accelerationSampleRate());
+  Serial.println(" Hz");
+  
+  Serial.print("IMU rotation sampling rate:");
+  Serial.print(IMU.gyroscopeSampleRate());
+  Serial.println(" Hz");
+
+  groundPressure = BARO.readPressure(); // Set pressure here to avoid potential interference from the motor.
+  
+  for (int i = 0; i < (int) sizeof(altimeterPins)/sizeof(int); i++) pinMode(altimeterPins[i], INPUT);
 }
 
 // Project our altitude and velocity outward to get our Apogee
@@ -79,62 +111,62 @@ float getApogee() {
 }
 
 void loop() {
-  float altitude = getAltitude();
+  float BAROAltitude = BAROGetAltitude();
+  float actAltitude = actGetAltitude();
   updateVelocity();
   updateAcceleration();
 
-  Serial.print("Altitude:");
-  Serial.print("\t");
-  Serial.print(altitude);
+  Serial.print("BARO Altitude: ");
+  Serial.print(BAROAltitude);
   
-  Serial.print("\t\t");
+  Serial.print("\n\n");
 
-  Serial.print("Local Velocity (x,y,z):");
-  Serial.print("\t");
+  Serial.print("Act Altitude: ");
+  Serial.print(BAROAltitude);
+  
+  Serial.print("\n\n");
+
+  Serial.print("Local Velocity (x,y,z): ");
   Serial.print(velocityLocalX);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(velocityLocalY);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(velocityLocalZ);
 
-  Serial.print("\t\t");
+  Serial.print("\n\n");
 
-  Serial.print("World Velocity (x,y,z):");
-  Serial.print("\t");
+  Serial.print("World Velocity (x,y,z): ");
   Serial.print(velocityWorldX);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(velocityWorldY);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(velocityWorldZ);
 
-  Serial.print("\t\t");
+  Serial.print("\n\n");
 
-  Serial.print("Local Acceleration (x,y,z):");
-  Serial.print("\t");
+  Serial.print("Local Acceleration (x,y,z): ");
   Serial.print(accelerationLocalX);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(accelerationLocalY);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(accelerationLocalZ);
 
-  Serial.print("\t\t");
+  Serial.print("\n\n");
 
-  Serial.print("World Acceleration (x,y,z):");
-  Serial.print("\t");
+  Serial.print("World Acceleration (x,y,z): ");
   Serial.print(accelerationWorldX);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(accelerationWorldY);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(accelerationWorldZ);
 
-  Serial.print("\t\t");
+  Serial.print("\n\n");
 
-  Serial.print("Rotation (x,y,z):");
-  Serial.print("\t");
+  Serial.print("Rotation (x,y,z): ");
   Serial.print(rotationX);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(rotationY);
-  Serial.print("\t");
+  Serial.print(", ");
   Serial.print(rotationZ);
 
   delay(mspf); // small loop delay, decreased from 50 to 20 to decrease activation time from 250 ms to 100 ms

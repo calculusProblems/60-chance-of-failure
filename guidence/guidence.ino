@@ -95,10 +95,29 @@ void setBrakes(float value) {
 
 // Power up system right before launch.
 void setup() {
+  Serial.print("Initializing BARO");
   BARO.begin();
-  groundPressure = BARO.readPressure(); // Set pressure here to avoid potential interference from the motor.
+  if (!BARO.begin()) {
+    Serial.println("BARO initialization failed");
+    while (1);
+  }
 
+  Serial.print("Initializing IMU");
   IMU.begin();
+  if (!IMU.begin()) {
+    Serial.println("IMU initialization failed");
+    while (1);
+  }
+
+  Serial.print("IMU acceleration sampling rate: ");
+  Serial.print(IMU.accelerationSampleRate());
+  serial.print(" Hz");
+  
+  Serial.print("IMU rotation sampling rate: ");
+  Serial.print(IMU.gyroscopeSampleRate());
+  serial.print(" Hz");
+
+  groundPressure = BARO.readPressure(); // Set pressure here to avoid potential interference from the motor.
   
   pinMode(brakePins[0], OUTPUT);
   pinMode(brakePins[1], OUTPUT);
