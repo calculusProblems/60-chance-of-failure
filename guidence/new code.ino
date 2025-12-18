@@ -1,12 +1,13 @@
 #include <Arduino.h>
 #include <Arduino_BMI270_BMM150.h>
 #include <Arduino_LPS22HB.h>
+#include <Servo.h>
 #include <cmath>
 
 const float targetAltitude = 750 / 3.281;
 
-const int brakePins[] = {9, 10};
-const int altimeterPins[] = {2, 3, 4, 5, 6, 7};
+const int brakePin1 = 9;
+const int brakePin2 = 10;
 
 const int mspf = 20;
 const float feedForward = 0.002;
@@ -25,6 +26,10 @@ float accelerationLocalZ = 0;
 float velocityLocalY = 0;
 
 float startTime = 0;
+float groundPressure = 0;
+
+Servo brake1;
+Servo brake2;
 
 const int FIT_N = 8;
 float fitT[FIT_N];
@@ -33,11 +38,8 @@ int fitIndex = 0;
 bool fitFull = false;
 
 float getAltitude() {
-  int total = 0;
-  for (int i = 0; i < (int)(sizeof(altimeterPins) / sizeof(int)); i++) {
-    total += digitalRead(altimeterPins[i]) * (1 << i);
-  }
-  return total;
+  float pressure = BARO.readPressure();
+  return 44330.0 * (1.0 - pow(pressure / groundPressure, 1.0 / 5.255));
 }
 
 void updateAcceleration() {
@@ -98,9 +100,9 @@ bool estimateApogee(float &apogeeOut) {
 void setBrakes(float value) {
   if (value < 0) value = 0;
   if (value > 1) value = 1;
-  int pwm = (int)(value * 255);
-  analogWrite(brakePins[0], pwm);
-  analogWrite(brakePins[1], pwm);
+  int angle = (int)(value * 90);
+  brake1.write(angle);
+  brake2.write(angle);
 }
 
 void setup() {
@@ -108,16 +110,19 @@ void setup() {
   Serial.begin(115200);
 
   IMU.begin();
+  BARO.begin();
+  groundPressure = BARO.readPressure();
 
-  pinMode(brakePins[0], OUTPUT);
-  pinMode(brakePins[1], OUTPUT);
-  for (int i = 0; i < (int)(sizeof(altimeterPins) / sizeof(int)); i++) {
-    pinMode(altimeterPins[i], INPUT);
-  }
+  brake1.attach(brakePin1);
+  brake2.attach(brakePin2);
+
+  brake1.write(0);
+  brake2.write(0);
 }
 
 void loop() {
   float t = (millis() - startTime) / 1000.0;
+
   updateAcceleration();
   updateVelocity();
 
